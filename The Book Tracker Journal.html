@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>The Book Tracker Journal</title>
+<style>
+/* ---------- Diseño base ---------- */
+:root{--beige:#f5ede1;--warm:#fffaf3;--terra:#b8634a;--terra2:#9a4f3a;--brown:#6e5444;--muted:#a08877;--line:#e8dccb;--red:#a4473a}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Avenir Next","Segoe UI",system-ui,sans-serif;background:var(--beige);color:var(--brown);font-size:15px;line-height:1.5;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+h1,h2,h3{font-family:Georgia,"Times New Roman",serif;color:var(--brown);margin:0 0 .5rem;font-weight:normal}
+h2{font-size:1.5rem}h3{font-size:1.15rem}
+.app{max-width:1100px;margin:0 auto;padding:20px 16px;display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:900px){body{padding-bottom:0}.app{grid-template-columns:200px 1fr;gap:28px;padding-top:32px}}
+
+/* ---------- Navegación: inferior en móvil, lateral en escritorio ---------- */
+nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--warm);border-top:1px solid var(--line);justify-content:space-around;padding:6px 2px calc(6px + env(safe-area-inset-bottom));z-index:10}
+nav button{background:none;border:0;color:var(--muted);font:inherit;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;cursor:pointer;border-radius:12px;min-width:0}
+nav button .ic{font-size:18px}
+nav button.on{color:var(--terra);background:#f3e4d6}
+@media(min-width:900px){nav{position:sticky;top:32px;flex-direction:column;border:0;background:none;gap:4px;padding:0;height:fit-content}
+nav button{flex-direction:row;font-size:15px;padding:10px 14px;justify-content:flex-start;gap:10px;width:100%}nav button .ic{font-size:16px}}
+
+/* ---------- Componentes ---------- */
+.section{display:none}.section.on{display:block}
+.card{background:var(--warm);border-radius:20px;padding:18px;border:1px solid var(--line);box-shadow:0 2px 14px rgba(110,84,68,.06)}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
+.stat .v{font-family:Georgia,serif;font-size:1.6rem;color:var(--terra);line-height:1.2}
+.stat .l{font-size:.8rem;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{background:var(--terra);color:#fff;border:0;border-radius:999px;padding:10px 18px;font:inherit;cursor:pointer}
+.btn:hover{background:var(--terra2)}
+.btn.ghost{background:transparent;color:var(--terra);border:1px solid var(--terra)}
+.btn.sm{padding:6px 12px;font-size:13px}
+.btn.danger{background:var(--red)}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font:inherit;color:var(--brown)}
+textarea{min-height:70px;resize:vertical}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--terra);border-radius:99px;transition:width .4s}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.err{color:var(--red);font-size:13px;margin-top:6px}
+.err:empty{display:none}
+.hidden{display:none!important}
+.muted{color:var(--muted);font-size:13px}
+.tag{font-size:12px;padding:3px 10px;border-radius:99px;background:#f3e4d6;color:var(--terra2);display:inline-block}
+.cover{width:64px;height:92px;border-radius:10px;object-fit:cover;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-family:Georgia,serif;font-size:11px;text-align:center;padding:4px;overflow:hidden}
+.books-list{display:grid;gap:12px;grid-template-columns:1fr}
+@media(min-width:700px){.books-list{grid-template-columns:1fr 1fr}}
+.book{display:flex;gap:14px}
+.day{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);margin:0;cursor:pointer}
+.day input{width:auto}
+.day.done .pg{text-decoration:line-through;opacity:.55}
+.item{padding:12px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.chart{display:flex;align-items:flex-end;gap:8px;height:150px;padding-bottom:22px}
+.chart .col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative}
+.chart .fill{width:100%;background:var(--terra);border-radius:8px 8px 0 0;min-height:3px}
+.chart .lb{position:absolute;bottom:-22px;font-size:11px;color:var(--muted)}
+.chart .vl{font-size:11px;color:var(--brown);margin-bottom:3px}
+.toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:var(--brown);color:#fff;padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:20;max-width:90%;text-align:center}
+.toast.show{opacity:1}
+@media(min-width:900px){.toast{bottom:30px}}
+h2.sec,h3.sec{margin:22px 0 10px}
+.sub{background:#fbf5ec;border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<nav id="nav">
+  <button data-v="home" class="on"><span class="ic">🏠</span><span>Inicio</span></button>
+  <button data-v="library"><span class="ic">📚</span><span>Biblioteca</span></button>
+  <button data-v="plan"><span class="ic">🗓️</span><span>Plan</span></button>
+  <button data-v="track"><span class="ic">✍️</span><span>Registro</span></button>
+  <button data-v="journal"><span class="ic">🌿</span><span>Diario</span></button>
+  <button data-v="stats"><span class="ic">📊</span><span>Estadísticas</span></button>
+  <button data-v="challenges"><span class="ic">🏆</span><span>Retos</span></button>
+  <button data-v="settings"><span class="ic">⚙️</span><span>Ajustes</span></button>
+</nav>
+
+<main>
+
+<!-- ============ INICIO ============ -->
+<section id="home" class="section on"><div id="homeBody"></div></section>
+
+<!-- ============ BIBLIOTECA ============ -->
+<section id="library" class="section">
+  <h2>Biblioteca</h2>
+  <div class="card" style="margin-top:12px">
+    <h3 id="bookFormTitle">Agregar libro</h3>
+    <form id="bookForm" novalidate>
+      <input type="hidden" name="bookId">
+      <label>Nombre del libro</label>
+      <input name="title" maxlength="120" placeholder="Ej. Rompe la barrera del no">
+      <label>Autor</label>
+      <input name="author" maxlength="80" placeholder="Ej. Chris Voss">
+      <div class="two">
+        <div><label>Páginas totales</label><input name="pages" type="number" min="1" max="5000" inputmode="numeric"></div>
+        <div><label>Estado</label>
+          <select name="status"><option value="pendiente">Pendiente</option><option value="leyendo">Leyendo</option><option value="terminado">Terminado</option></select>
+        </div>
+      </div>
+      <div class="two">
+        <div><label>Fecha de inicio</label><input name="start" type="date"></div>
+        <div><label>Fecha objetivo</label><input name="due" type="date"></div>
+      </div>
+      <label>Portada (opcional, máx. 400 KB)</label>
+      <input name="cover" type="file" accept="image/*">
+      <div class="err" id="bookErr"></div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn" type="submit">Guardar libro</button>
+        <button class="btn ghost hidden" type="button" id="bookCancel">Cancelar edición</button>
+      </div>
+    </form>
+  </div>
+  <h2 class="sec">Mis libros</h2>
+  <div id="bookList" class="books-list"></div>
+</section>
+
+<!-- ============ PLANIFICADOR ============ -->
+<section id="plan" class="section">
+  <h2>Planificador inteligente</h2>
+  <div class="card" style="margin-top:12px">
+    <form id="planForm" novalidate>
+      <div class="two">
+        <div><label>Libro</label><select id="planBook"></select></div>
+        <div><label>Duración del plan</label>
+          <select id="planDays"><option value="7">7 días</option><option value="10">10 días</option><option value="15" selected>15 días</option><option value="21">21 días</option><option value="30">30 días</option></select>
+        </div>
+      </div>
+      <p id="planCalc" class="muted" style="margin:12px 0 0"></p>
+      <div class="err" id="planErr"></div>
+      <div class="row" style="margin-top:14px"><button class="btn" type="submit">Generar plan</button></div>
+    </form>
+  </div>
+  <div id="planOut" style="margin-top:16px"></div>
+</section>
+
+<!-- ============ REGISTRO DIARIO ============ -->
+<section id="track" class="section">
+  <h2>Seguimiento diario</h2>
+  <div class="card" style="margin-top:12px">
+    <form id="trackForm" novalidate>
+      <label>Libro</label><select name="book"></select>
+      <div class="two">
+        <div><label>Fecha</label><input name="date" type="date"></div>
+        <div><label>Páginas leídas</label><input name="pages" type="number" min="0" max="1000" value="0"></div>
+      </div>
+      <div class="two">
+        <div><label>Minutos de lectura</label><input name="min" type="number" min="0" max="1440" value="0"></div>
+        <div style="display:flex;align-items:end;padding-bottom:6px"><label class="row" style="margin:0;color:var(--brown);cursor:pointer"><input type="checkbox" name="done" style="width:auto"> Día completado</label></div>
+      </div>
+      <label>Observaciones</label><textarea name="obs" maxlength="500"></textarea>
+      <label>Aprendizaje del día</label><textarea name="learn" maxlength="500"></textarea>
+      <div class="err" id="trackErr"></div>
+      <div class="row" style="margin-top:14px"><button class="btn" type="submit">Guardar registro</button></div>
+    </form>
+  </div>
+  <h2 class="sec">Registros recientes</h2>
+  <div class="card" id="trackList"></div>
+</section>
+
+<!-- ============ DIARIO ============ -->
+<section id="journal" class="section">
+  <h2>Diario de aprendizaje</h2>
+  <div class="card" style="margin-top:12px">
+    <form id="jForm" novalidate>
+      <div class="two">
+        <div><label>Fecha</label><input name="date" type="date"></div>
+        <div><label>Libro</label><select name="book"></select></div>
+      </div>
+      <label>¿Qué aprendí hoy?</label><textarea name="q1" maxlength="600"></textarea>
+      <label>¿Qué idea me llamó la atención?</label><textarea name="q2" maxlength="600"></textarea>
+      <label>¿Cómo puedo aplicarla?</label><textarea name="q3" maxlength="600"></textarea>
+      <label>¿Qué debo mejorar?</label><textarea name="q4" maxlength="600"></textarea>
+      <label>¿Qué acción realizaré mañana?</label><textarea name="q5" maxlength="600"></textarea>
+      <div class="err" id="jErr"></div>
+      <div class="row" style="margin-top:14px"><button class="btn" type="submit">Guardar entrada</button></div>
+    </form>
+  </div>
+  <h2 class="sec">Entradas</h2>
+  <div id="jList"></div>
+</section>
+
+<!-- ============ ESTADÍSTICAS ============ -->
+<section id="stats" class="section"><div id="statsBody" style="margin-top:12px"></div></section>
+
+<!-- ============ RETOS ============ -->
+<section id="challenges" class="section">
+  <h2>Retos personales</h2>
+  <div class="card" style="margin-top:12px">
+    <form id="chForm" novalidate>
+      <div class="two">
+        <div><label>Duración</label>
+          <select name="days"><option value="7">7 días</option><option value="15">15 días</option><option value="30">30 días</option><option value="90">90 días</option></select>
+        </div>
+        <div><label>Meta diaria (páginas)</label><input name="goal" type="number" min="1" max="1000" value="20"></div>
+      </div>
+      <div class="two">
+        <div><label>Nombre (opcional)</label><input name="name" maxlength="60" placeholder="Ej. Lectura de mañana"></div>
+        <div><label>Fecha de inicio</label><input name="start" type="date"></div>
+      </div>
+      <div class="err" id="chErr"></div>
+      <div class="row" style="margin-top:14px"><button class="btn" type="submit">Crear reto</button></div>
+    </form>
+  </div>
+  <h2 class="sec">Mis retos</h2>
+  <div id="chList"></div>
+</section>
+
+<!-- ============ AJUSTES ============ -->
+<section id="settings" class="section">
+  <h2>Ajustes y copias de seguridad</h2>
+  <div class="card" style="margin-top:12px">
+    <form id="setForm" novalidate>
+      <label>Tu nombre (para el saludo)</label><input name="name" maxlength="40">
+      <label>Meta diaria de lectura (páginas)</label><input name="goal" type="number" min="1" max="1000">
+      <div class="err" id="setErr"></div>
+      <div class="row" style="margin-top:14px"><button class="btn" type="submit">Guardar ajustes</button></div>
+    </form>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>Copia de seguridad</h3>
+    <p class="muted">Tus datos se guardan en este navegador. Exporta una copia JSON para respaldarlos o moverlos a otro dispositivo.</p>
+    <div class="row" style="justify-content:flex-start;gap:10px">
+      <button class="btn" data-act="export">Exportar JSON</button>
+      <button class="btn ghost" data-act="importPick">Importar JSON</button>
+      <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>Zona de peligro</h3>
+    <p class="muted">Borra todos los libros, registros, planes, diario y retos de este navegador.</p>
+    <button class="btn danger" data-act="reset">Borrar todos los datos</button>
+  </div>
+</section>
+
+<!-- ============ DE LA LECTURA A LA ACCIÓN ============ -->
+<section id="action" class="section">
+  <h2>De la lectura a la acción</h2>
+  <p class="muted">Convierte cada aprendizaje en acciones, experimentos y revisiones semanales.</p>
+  <div class="card" style="margin-top:12px">
+    <div class="two">
+      <div><label>Libro</label><select id="aBook"></select></div>
+      <div><label>Categoría</label><select id="aCat"></select></div>
+    </div>
+    <div class="two">
+      <div><label>Desde</label><input id="aFrom" type="date"></div>
+      <div><label>Hasta</label><input id="aTo" type="date"></div>
+    </div>
+    <label>Buscar en mis aprendizajes</label><input id="aSearch" placeholder="Palabra clave">
+    <div class="row" style="margin-top:12px"><button class="btn sm ghost" data-ac="aClear">Limpiar filtros</button></div>
+  </div>
+  <h3 class="sec">Panel de resultados</h3>
+  <div id="aStats"></div>
+  <h3 class="sec">Nuevo aprendizaje</h3>
+  <div class="card">
+    <form id="lForm" novalidate>
+      <input type="hidden" name="id">
+      <div class="two"><div><label>Libro</label><select name="book"></select></div><div><label>Fecha</label><input name="date" type="date"></div></div>
+      <div class="two"><div><label>Número de página</label><input name="page" type="number" min="1" max="5000"></div><div><label>Categoría</label><select name="cat"></select></div></div>
+      <label>Idea o enseñanza que aprendí</label><textarea name="idea" maxlength="600"></textarea>
+      <label>Frase importante del libro</label><textarea name="quote" maxlength="600"></textarea>
+      <label>¿Por qué considero importante este aprendizaje?</label><textarea name="why" maxlength="600"></textarea>
+      <label>¿Cómo se relaciona con mi vida?</label><textarea name="life" maxlength="600"></textarea>
+      <div class="err" id="lErr"></div>
+      <div class="row" style="margin-top:14px"><button class="btn" type="submit" id="lSubmit">Guardar aprendizaje</button><button class="btn ghost hidden" type="button" id="lCancel" data-ac="lCancel">Cancelar edición</button></div>
+    </form>
+  </div>
+  <h3 class="sec">Historial de aprendizajes</h3>
+  <div id="aList"></div>
+  <h3 class="sec">Revisión semanal</h3>
+  <div class="card">
+    <form id="rvForm" novalidate>
+      <label>Fecha de la revisión</label><input name="date" type="date">
+      <label>1. ¿Qué aprendí esta semana?</label><textarea name="rq1" maxlength="600"></textarea>
+      <label>2. ¿Qué apliqué realmente?</label><textarea name="rq2" maxlength="600"></textarea>
+      <label>3. ¿Qué cambios noté en mí?</label><textarea name="rq3" maxlength="600"></textarea>
+      <label>4. ¿Qué me costó poner en práctica?</label><textarea name="rq4" maxlength="600"></textarea>
+      <label>5. ¿Qué quiero mejorar la próxima semana?</label><textarea name="rq5" maxlength="600"></textarea>
+      <div class="err" id="rvErr"></div>
+      <div class="row" style="margin-top:14px"><button class="btn" type="submit">Guardar revisión</button></div>
+    </form>
+  </div>
+  <h3 class="sec">Revisiones anteriores</h3>
+  <div id="rvList"></div>
+</section>
+</main>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* =====================================================================
+   My Reading Journey
+   Capa de datos: Store (localStorage). Para cuentas privadas y nube,
+   sustituir Store.load/save por llamadas a un backend manteniendo S.
+   ===================================================================== */
+
+/* ---------- Utilidades ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const today = () => iso(new Date());
+const addDays = (s, n) => { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return iso(d); };
+const diffDays = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
+const fmtDate = s => new Date(s + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+const pct = (a, b) => b ? Math.min(100, Math.round(a / b * 100)) : 0;
+const COLORS = ['#b8634a', '#c9a58c', '#8c6a55', '#d4917a', '#a88b74', '#9a7b66'];
+const toast = msg => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200); };
+const showErr = (sel, list) => { $(sel).innerHTML = list.map(esc).join('<br>'); };
+
+/* ---------- Modelo de datos ---------- */
+function makePlan(bookId, pages, n, start) {
+  // Reparte las páginas de forma equilibrada: los primeros días reciben una página extra si hay resto.
+  const base = Math.floor(pages / n), rem = pages % n, days = [];
+  for (let i = 0; i < n; i++) days.push({ n: i + 1, date: addDays(start, i), pages: base + (i < rem ? 1 : 0), done: false });
+  return { bookId, n, start, days };
+}
+
+function seed() {
+  // Libro inicial solicitado: Rompe la barrera del no (288 páginas, plan de 15 días)
+  const id = uid(), start = today();
+  return {
+    profile: { name: '', goal: 20 },
+    books: [{ id, title: 'Rompe la barrera del no', author: 'Chris Voss', pages: 288, start, due: addDays(start, 14), status: 'leyendo', cover: '', color: COLORS[0] }],
+    sessions: [], journal: [], challenges: [],
+    plans: { [id]: makePlan(id, 288, 15, start) }
+  };
+}
+
+const Store = {
+  load() {
+    try { const d = JSON.parse(localStorage.getItem('mrj_v1')); if (d && Array.isArray(d.books)) return fix(d); } catch (e) {}
+    return fix(seed());
+  },
+  save() {
+    try { localStorage.setItem('mrj_v1', JSON.stringify(S)); return true; }
+    catch (e) { alert('No hay espacio suficiente en el navegador. Usa portadas más pequeñas o exporta tu copia.'); return false; }
+  }
+};
+let S = Store.load();
+Store.save();
+const save = () => Store.save();
+
+/* ---------- Consultas ---------- */
+const bookOf = id => S.books.find(b => b.id === id);
+const readOf = id => S.sessions.filter(s => s.book === id).reduce((a, s) => a + s.pages, 0);
+const dayPages = d => S.sessions.filter(s => s.date === d).reduce((a, s) => a + s.pages, 0);
+const totalPages = () => S.sessions.reduce((a, s) => a + s.pages, 0);
+const totalMin = () => S.sessions.reduce((a, s) => a + s.min, 0);
+const activeDates = () => new Set(S.sessions.filter(s => s.pages > 0 || s.min > 0 || s.done).map(s => s.date));
+
+function streaks() {
+  const set = activeDates(), t = today();
+  let cur = 0, d = set.has(t) ? t : addDays(t, -1);
+  while (set.has(d)) { cur++; d = addDays(d, -1); }
+  const ds = [...set].sort(); let best = 0, run = 0, prev = null;
+  for (const x of ds) { run = prev && diffDays(prev, x) === 1 ? run + 1 : 1; best = Math.max(best, run); prev = x; }
+  return { cur, best };
+}
+
+function chStatus(c) {
+  const t = today(), end = addDays(c.start, c.days - 1);
+  let ok = 0;
+  for (let i = 0; i < c.days; i++) { const d = addDays(c.start, i); if (d > t) break; if (dayPages(d) >= c.goal) ok++; }
+  const elapsed = Math.max(0, Math.min(c.days, diffDays(c.start, t) + 1));
+  const left = Math.max(0, c.days - elapsed);
+  return { ok, end, left, elapsed, finished: t > end, complete: ok === c.days };
+}
+
+/* ---------- Navegación ---------- */
+function go(v) {
+  $$('.section').forEach(s => s.classList.toggle('on', s.id === v));
+  $$('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  render(v);
+  window.scrollTo(0, 0);
+}
+function render(v) {
+  ({ home: renderHome, library: renderLibrary, plan: renderPlan, track: renderTrack,
+     journal: renderJournal, stats: renderStats, challenges: renderChallenges, settings: renderSettings, action: renderAction })[v]?.();
+}
+function fillBookSelects() {
+  const opt = list => list.map(b => `<option value="${b.id}">${esc(b.title)}</option>`).join('');
+  const pl = $('#planBook'), tb = $('#trackForm select[name=book]'), jb = $('#jForm select[name=book]');
+  const kp = pl.value, kt = tb.value, kj = jb.value;
+  pl.innerHTML = opt(S.books.filter(b => b.status !== 'terminado')) || '<option value="">Sin libros activos</option>';
+  tb.innerHTML = opt(S.books) || '<option value="">Agrega un libro primero</option>';
+  jb.innerHTML = '<option value="">General</option>' + opt(S.books);
+  if ([...pl.options].some(o => o.value === kp)) pl.value = kp;
+  if ([...tb.options].some(o => o.value === kt)) tb.value = kt;
+  if ([...jb.options].some(o => o.value === kj)) jb.value = kj;
+}
+
+/* ---------- INICIO ---------- */
+function renderHome() {
+  const b = S.books.find(x => x.status === 'leyendo') || null;
+  const t = today(), st = streaks(), goal = S.profile.goal || 20, tp = dayPages(t);
+  const h = new Date().getHours(), hi = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+  const name = S.profile.name ? ', ' + esc(S.profile.name) : '';
+  const fecha = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  let next = 'Crea un plan en la sección Plan para ver tu próximo objetivo.';
+  if (b) {
+    const p = S.plans[b.id];
+    const nd = p && p.days.find(d => !d.done && d.date >= t);
+    next = nd ? `Día ${nd.n} (${fmtDate(nd.date)}): leer ${nd.pages} páginas` : 'Sin días pendientes en el plan.';
+  }
+  const active = S.challenges.map(chStatus).filter(c => !c.finished && !c.complete);
+  const nextCh = S.challenges.length ? (active[0] ? 'Reto en curso: ' + (S.challenges.find(c => !chStatus(c).finished && !chStatus(c).complete).name || 'sin nombre') : 'Todos tus retos han terminado') : 'Crea un reto en la sección Retos.';
+  const rp = b ? readOf(b.id) : 0;
+  $('#homeBody').innerHTML = `
+    <h2>${hi}${name} ✦</h2>
+    <p class="muted" style="text-transform:capitalize">${fecha}</p>
+    <div class="card" style="margin:16px 0">
+      ${b ? `<div class="row"><div><span class="tag">Leyendo ahora</span>
+        <h3 style="margin-top:8px">${esc(b.title)}</h3><p class="muted">${esc(b.author)}</p></div>
+        <div style="font-family:Georgia,serif;font-size:2rem;color:var(--terra)">${pct(rp, b.pages)}%</div></div>
+        <div class="bar" style="margin:12px 0"><i style="width:${pct(rp, b.pages)}%"></i></div>
+        <p class="muted">${rp} de ${b.pages} páginas</p>`
+        : `<p>No tienes ningún libro en lectura. Ve a Biblioteca y cambia el estado de un libro a «Leyendo».</p>`}
+    </div>
+    <div class="grid">
+      <div class="card stat"><div class="v">${totalPages()}</div><div class="l">Páginas leídas</div></div>
+      <div class="card stat"><div class="v">${st.cur}</div><div class="l">Días consecutivos</div></div>
+      <div class="card stat"><div class="v">${(totalMin() / 60).toFixed(1)}</div><div class="l">Horas de lectura</div></div>
+      <div class="card stat"><div class="v">${S.books.filter(x => x.status === 'terminado').length}</div><div class="l">Libros terminados</div></div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr;margin-top:12px">
+      <div class="card">
+        <div class="row"><h3>Meta diaria</h3><span class="muted">${tp} / ${goal} páginas</span></div>
+        <div class="bar" style="margin:10px 0"><i style="width:${pct(tp, goal)}%"></i></div>
+        <div class="row"><span class="muted">${pct(tp, goal) >= 100 ? '¡Meta de hoy alcanzada!' : 'Aún te faltan ' + (goal - tp) + ' páginas hoy'}</span>
+        <button class="btn sm" data-act="go" data-v="track">Registrar hoy</button></div>
+      </div>
+      <div class="card"><h3>Próximo objetivo</h3><p>${esc(next)}</p><p class="muted">${esc(nextCh)}</p></div>
+    </div>`;
+}
+
+/* ---------- BIBLIOTECA ---------- */
+let coverData = '';
+function renderLibrary() {
+  if (!S.books.length) { $('#bookList').innerHTML = '<p class="muted">Aún no tienes libros. Agrega el primero arriba.</p>'; return; }
+  const labels = { pendiente: 'Pendiente', leyendo: 'Leyendo', terminado: 'Terminado' };
+  $('#bookList').innerHTML = S.books.map(b => {
+    const rp = readOf(b.id);
+    const img = b.cover ? `<img class="cover" src="${b.cover}" alt="">`
+      : `<div class="cover" style="background:${b.color || COLORS[0]}">${esc(b.title.slice(0, 40))}</div>`;
+    return `<div class="card book">${img}<div style="flex:1;min-width:0">
+      <span class="tag">${labels[b.status]}</span>
+      <h3 style="margin:6px 0 2px;overflow-wrap:anywhere">${esc(b.title)}</h3>
+      <p class="muted" style="margin:0">${esc(b.author)} · ${b.pages} págs.</p>
+      <p class="muted" style="margin:4px 0">Inicio ${fmtDate(b.start)} · Meta ${fmtDate(b.due)}</p>
+      <div class="bar" style="margin:8px 0"><i style="width:${pct(rp, b.pages)}%"></i></div>
+      <p class="muted" style="margin:0 0 8px">${rp} de ${b.pages} páginas (${pct(rp, b.pages)}%)</p>
+      <div class="row" style="justify-content:flex-start"><button class="btn sm ghost" data-act="edit" data-id="${b.id}">Editar</button>
+      <button class="btn sm ghost" data-ac="openAction" data-id="${b.id}">De la lectura a la acción</button>
+      <button class="btn sm danger" data-act="delBook" data-id="${b.id}">Eliminar</button></div>
+    </div></div>`;
+  }).join('');
+}
+function openEdit(id) {
+  const b = bookOf(id); if (!b) return;
+  const f = $('#bookForm');
+  f.bookId.value = b.id; f.title.value = b.title; f.author.value = b.author; f.pages.value = b.pages;
+  f.start.value = b.start; f.due.value = b.due; f.status.value = b.status; f.cover.value = '';
+  coverData = ''; $('#bookFormTitle').textContent = 'Editar libro';
+  $('#bookCancel').classList.remove('hidden'); $('#bookErr').textContent = '';
+  f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function resetBookForm() {
+  const f = $('#bookForm'); f.reset(); f.bookId.value = ''; coverData = '';
+  $('#bookFormTitle').textContent = 'Agregar libro'; $('#bookCancel').classList.add('hidden'); $('#bookErr').textContent = '';
+}
+$('#bookCancel').addEventListener('click', resetBookForm);
+$('#bookForm [name=cover]').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) { coverData = ''; return; }
+  if (file.size > 400 * 1024) { toast('La portada supera 400 KB'); e.target.value = ''; coverData = ''; return; }
+  const r = new FileReader(); r.onload = () => { coverData = r.result; }; r.readAsDataURL(file);
+});
+$('#bookForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target, id = f.bookId.value;
+  const title = f.title.value.trim(), author = f.author.value.trim(), pages = Number(f.pages.value);
+  const start = f.start.value, due = f.due.value, status = f.status.value;
+  const errs = [];
+  if (!title || title.length > 120) errs.push('Escribe el nombre del libro (máximo 120 caracteres).');
+  if (!author || author.length > 80) errs.push('Escribe el autor (máximo 80 caracteres).');
+  if (!Number.isInteger(pages) || pages < 1 || pages > 5000) errs.push('Las páginas deben ser un número entero entre 1 y 5000.');
+  if (!start) errs.push('Indica la fecha de inicio.');
+  if (!due) errs.push('Indica la fecha objetivo de finalización.');
+  else if (start && due < start) errs.push('La fecha objetivo no puede ser anterior a la de inicio.');
+  if (id && bookOf(id) && pages < readOf(id)) errs.push(`Ya registraste ${readOf(id)} páginas; el total no puede ser menor.`);
+  showErr('#bookErr', errs);
+  if (errs.length) return;
+  if (id) {
+    const b = bookOf(id);
+    Object.assign(b, { title, author, pages, start, due, status, cover: coverData || b.cover });
+  } else {
+    S.books.push({ id: uid(), title, author, pages, start, due, status, cover: coverData, color: COLORS[S.books.length % COLORS.length] });
+    S.plans[S.books[S.books.length - 1].id] = makePlan(S.books[S.books.length - 1].id, pages, 15, start);
+  }
+  if (save()) { toast(id ? 'Libro actualizado' : 'Libro agregado'); resetBookForm(); fillBookSelects(); renderLibrary(); }
+});
+function deleteBook(id) {
+  const b = bookOf(id); if (!b) return;
+  if (!confirm(`¿Eliminar «${b.title}»? Se borrarán también sus registros, plan y entradas del diario.`)) return;
+  S.books = S.books.filter(x => x.id !== id);
+  S.sessions = S.sessions.filter(s => s.book !== id);
+  S.journal = S.journal.filter(j => j.book !== id);
+  S.learn = S.learn.filter(l => l.book !== id);
+  delete S.plans[id];
+  save(); fillBookSelects(); renderLibrary(); toast('Libro eliminado');
+}
+
+/* ---------- PLANIFICADOR ---------- */
+function updateCalc() {
+  const bid = $('#planBook').value, n = Number($('#planDays').value), b = bookOf(bid);
+  if (!b) { $('#planCalc').textContent = 'Agrega un libro para planificar.'; return; }
+  const left = Math.max(0, b.pages - readOf(b.id));
+  const avail = Math.max(1, diffDays(today(), b.due) + 1);
+  const perDay = Math.ceil(b.pages / n);
+  const need = Math.ceil(left / avail);
+  $('#planCalc').innerHTML = `Quedan ${left} páginas y ${avail} días hasta la fecha objetivo. Páginas diarias necesarias: <b>${need}</b>. Con ${n} días: <b>${perDay}</b> páginas al día${n > avail ? ' · <span style="color:var(--red)">el plan supera la fecha objetivo</span>' : ''}.`;
+}
+function reprogram(bid) {
+  const p = S.plans[bid]; if (!p) return;
+  const t = today(); let pend = 0;
+  p.days.forEach(d => {
+    if (!d.done && d.date < t) {
+      const got = S.sessions.filter(s => s.book === bid && s.date === d.date).reduce((a, s) => a + s.pages, 0);
+      const left = Math.max(0, d.pages - got);
+      if (left > 0) { pend += left; d.pages = d.pages - left; }
+    }
+  });
+  if (!pend) { toast('No hay páginas pendientes de días anteriores'); return; }
+  let fut = p.days.filter(d => !d.done && d.date >= t);
+  if (!fut.length) { const last = p.days[p.days.length - 1]; const nd = { n: p.days.length + 1, date: addDays(last.date, 1), pages: 0, done: false }; p.days.push(nd); fut = [nd]; }
+  for (let i = 0; i < pend; i++) fut[i % fut.length].pages++;
+  p.n = p.days.length;
+  save(); renderPlan(); toast(`${pend} páginas reprogramadas`);
+}
+function renderPlan() {
+  fillBookSelects(); updateCalc();
+  const bid = $('#planBook').value, p = S.plans[bid], out = $('#planOut');
+  if (!bid || !p) { out.innerHTML = '<p class="muted">Aún no hay plan para este libro. Elige la duración y pulsa «Generar plan».</p>'; return; }
+  const t = today(), past = p.days.filter(d => d.date <= t);
+  const ok = past.filter(d => d.done).length;
+  const planned = past.reduce((a, d) => a + d.pages, 0);
+  const readTo = S.sessions.filter(s => s.book === bid && s.date <= t).reduce((a, s) => a + s.pages, 0);
+  out.innerHTML = `<div class="card">
+    <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="stat"><div class="v">${pct(ok, past.length)}%</div><div class="l">Cumplimiento (${ok} de ${past.length} días)</div></div>
+      <div class="stat"><div class="v">${planned}</div><div class="l">Páginas planeadas a hoy</div></div>
+      <div class="stat"><div class="v">${readTo}</div><div class="l">Páginas leídas a hoy</div></div>
+    </div>
+    <div class="row" style="margin:14px 0"><button class="btn sm ghost" data-act="reprogram" data-id="${bid}">Reprogramar pendientes</button>
+    <button class="btn sm danger" data-act="delPlan" data-id="${bid}">Eliminar plan</button></div>
+    ${p.days.map((d, i) => {
+      const st = d.done ? 'Completado' : d.date < t ? 'Atrasado' : d.date === t ? 'Hoy' : 'Próximo';
+      return `<label class="day ${d.done ? 'done' : ''}"><input type="checkbox" data-act="day" data-i="${i}" ${d.done ? 'checked' : ''}>
+        <div style="flex:1"><div class="pg"><b>Día ${d.n}</b> · ${d.pages} páginas</div>
+        <div class="muted">${fmtDate(d.date)} · ${st}</div></div></label>`;
+    }).join('')}
+  </div>`;
+}
+$('#planForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const bid = $('#planBook').value, n = Number($('#planDays').value), b = bookOf(bid);
+  const errs = [];
+  if (!b) errs.push('Selecciona un libro activo. Agrega uno en Biblioteca si no tienes.');
+  if (![7, 10, 15, 21, 30].includes(n)) errs.push('Elige una duración válida.');
+  showErr('#planErr', errs); if (errs.length) return;
+  if (S.plans[bid] && !confirm('Ya existe un plan para este libro. ¿Reemplazarlo?')) return;
+  const left = Math.max(0, b.pages - readOf(b.id));
+  S.plans[bid] = makePlan(bid, left || b.pages, n, today() < b.start ? b.start : today());
+  if (save()) { renderPlan(); toast('Plan generado'); }
+});
+$('#planBook').addEventListener('change', renderPlan);
+$('#planDays').addEventListener('change', updateCalc);
+
+/* ---------- REGISTRO ---------- */
+function renderTrack() {
+  fillBookSelects();
+  const f = $('#trackForm'); if (!f.date.value) f.date.value = today();
+  const list = [...S.sessions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
+  $('#trackList').innerHTML = list.length ? list.map(s => `<div class="item">
+    <div class="row"><b>${fmtDate(s.date)}</b><span class="muted">${esc(bookOf(s.book)?.title || 'Libro eliminado')}</span></div>
+    <p style="margin:4px 0">${s.pages} páginas · ${s.min} min${s.done ? ' · ✓ completado' : ''}</p>
+    ${s.obs ? `<p class="muted" style="margin:2px 0">${esc(s.obs)}</p>` : ''}
+    ${s.learn ? `<p style="margin:2px 0"><i>Aprendí: ${esc(s.learn)}</i></p>` : ''}
+    <button class="btn sm ghost" data-act="delSession" data-id="${s.id}" style="margin-top:6px">Eliminar</button></div>`).join('')
+    : '<p class="muted">Todavía no hay registros.</p>';
+}
+$('#trackForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target, bid = f.book.value, b = bookOf(bid), date = f.date.value;
+  const pages = Number(f.pages.value), min = Number(f.min.value), done = f.done.checked;
+  const obs = f.obs.value.trim(), learn = f.learn.value.trim(), errs = [];
+  if (!b) errs.push('Selecciona un libro.');
+  if (!date) errs.push('Indica la fecha.');
+  else if (date > today()) errs.push('La fecha no puede ser futura.');
+  if (!Number.isInteger(pages) || pages < 0 || pages > 1000) errs.push('Las páginas deben ser un entero entre 0 y 1000.');
+  if (!Number.isInteger(min) || min < 0 || min > 1440) errs.push('Los minutos deben ser un entero entre 0 y 1440.');
+  if (b && Number.isInteger(pages) && readOf(bid) + pages > b.pages) errs.push(`Superarías el total del libro (${b.pages} páginas). Quedan ${b.pages - readOf(bid)}.`);
+  if (obs.length > 500 || learn.length > 500) errs.push('Observaciones y aprendizaje: máximo 500 caracteres.');
+  if (!errs.length && !pages && !min && !done) errs.push('Registra páginas, minutos o marca el día como completado.');
+  showErr('#trackErr', errs); if (errs.length) return;
+  S.sessions.push({ id: uid(), book: bid, date, pages, min, done, obs, learn });
+  const p = S.plans[bid], d = p && p.days.find(x => x.date === date);
+  if (d && (done || (d.pages > 0 && pages >= d.pages))) d.done = true;
+  if (readOf(bid) >= b.pages) b.status = 'terminado'; else if (b.status === 'pendiente') b.status = 'leyendo';
+  if (save()) { toast('Registro guardado'); f.reset(); f.book.value = bid; f.date.value = today(); f.pages.value = 0; f.min.value = 0; renderTrack(); }
+});
+function deleteSession(id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  const s = S.sessions.find(x => x.id === id); if (!s) return;
+  S.sessions = S.sessions.filter(x => x.id !== id);
+  const b = bookOf(s.book);
+  if (b && b.status === 'terminado' && readOf(b.id) < b.pages) b.status = 'leyendo';
+  save(); renderTrack(); toast('Registro eliminado');
+}
+
+/* ---------- DIARIO ---------- */
+const QS = ['¿Qué aprendí hoy?', '¿Qué idea me llamó la atención?', '¿Cómo puedo aplicarla?', '¿Qué debo mejorar?', '¿Qué acción realizaré mañana?'];
+function renderJournal() {
+  fillBookSelects();
+  const f = $('#jForm'); if (!f.date.value) f.date.value = today();
+  const list = [...S.journal].sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
+  $('#jList').innerHTML = list.length ? list.map(j => `<div class="card" style="margin-bottom:12px">
+    <div class="row"><div><b>${fmtDate(j.date)}</b> <span class="muted">· ${esc(bookOf(j.book)?.title || 'General')}</span></div>
+    <button class="btn sm ghost" data-act="delJournal" data-id="${j.id}">Eliminar</button></div>
+    ${j.a.map((a, i) => a ? `<div class="item"><span class="muted">${QS[i]}</span><p style="margin:2px 0 0;white-space:pre-wrap">${esc(a)}</p></div>` : '').join('')}
+  </div>`).join('') : '<p class="muted">Aún no tienes entradas en tu diario.</p>';
+}
+$('#jForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target, date = f.date.value, book = f.book.value;
+  const a = [f.q1.value.trim(), f.q2.value.trim(), f.q3.value.trim(), f.q4.value.trim(), f.q5.value.trim()];
+  const errs = [];
+  if (!date) errs.push('Indica la fecha.');
+  else if (date > today()) errs.push('La fecha no puede ser futura.');
+  if (a.every(x => !x)) errs.push('Escribe al menos una reflexión.');
+  if (a.some(x => x.length > 600)) errs.push('Cada respuesta admite máximo 600 caracteres.');
+  showErr('#jErr', errs); if (errs.length) return;
+  S.journal.push({ id: uid(), date, book, a, created: Date.now() });
+  if (save()) { toast('Entrada guardada'); f.reset(); f.date.value = today(); renderJournal(); }
+});
+function deleteJournal(id) {
+  if (!confirm('¿Eliminar esta entrada?')) return;
+  S.journal = S.journal.filter(j => j.id !== id); save(); renderJournal(); toast('Entrada eliminada');
+}
+
+/* ---------- ESTADÍSTICAS ---------- */
+function renderStats() {
+  const st = streaks(), t = today(), goal = S.profile.goal || 20;
+  const days = activeDates().size, tp = totalPages();
+  const metDays = [...new Set(S.sessions.map(s => s.date))].filter(d => dayPages(d) >= goal).length;
+  const doneCh = S.challenges.filter(c => chStatus(c).complete).length;
+  const week = []; for (let i = 6; i >= 0; i--) { const d = addDays(t, -i); week.push({ d, p: dayPages(d) }); }
+  const max = Math.max(1, ...week.map(w => w.p));
+  $('#statsBody').innerHTML = `
+    <div class="grid">
+      <div class="card stat"><div class="v">${S.books.filter(b => b.status === 'terminado').length}</div><div class="l">Libros terminados</div></div>
+      <div class="card stat"><div class="v">${tp}</div><div class="l">Páginas leídas</div></div>
+      <div class="card stat"><div class="v">${(totalMin() / 60).toFixed(1)}</div><div class="l">Horas de lectura</div></div>
+      <div class="card stat"><div class="v">${days ? Math.round(tp / days) : 0}</div><div class="l">Promedio páginas por día</div></div>
+      <div class="card stat"><div class="v">${st.cur}</div><div class="l">Racha actual (días)</div></div>
+      <div class="card stat"><div class="v">${st.best}</div><div class="l">Mejor racha (días)</div></div>
+      <div class="card stat"><div class="v">${metDays}</div><div class="l">Días con meta diaria</div></div>
+      <div class="card stat"><div class="v">${doneCh}</div><div class="l">Retos completados</div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>Páginas en los últimos 7 días</h3>
+      <div class="chart" style="margin-top:14px">${week.map(w => `<div class="col"><span class="vl">${w.p || ''}</span>
+        <div class="fill" style="height:${Math.round(w.p / max * 100)}%"></div>
+        <span class="lb">${new Date(w.d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' })}</span></div>`).join('')}</div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>Progreso por libro</h3>
+      ${S.books.length ? S.books.map(b => `<div class="item"><div class="row"><b>${esc(b.title)}</b><span class="muted">${pct(readOf(b.id), b.pages)}%</span></div>
+        <div class="bar" style="margin:6px 0"><i style="width:${pct(readOf(b.id), b.pages)}%"></i></div></div>`).join('') : '<p class="muted">Sin libros todavía.</p>'}
+    </div>`;
+}
+
+/* ---------- RETOS ---------- */
+function renderChallenges() {
+  const f = $('#chForm'); if (!f.start.value) f.start.value = today();
+  $('#chList').innerHTML = S.challenges.length ? S.challenges.map(c => {
+    const s = chStatus(c), pc = pct(s.ok, c.days);
+    const label = s.complete ? '✓ Reto cumplido' : s.finished ? 'Finalizado' : s.elapsed === 0 ? 'Comienza el ' + fmtDate(c.start) : 'En curso';
+    return `<div class="card" style="margin-bottom:12px">
+      <div class="row"><div><span class="tag">${c.days} días</span><h3 style="margin-top:6px">${esc(c.name || 'Reto de ' + c.days + ' días')}</h3>
+      <p class="muted" style="margin:0">Meta: ${c.goal} páginas al día · ${fmtDate(c.start)} → ${fmtDate(s.end)}</p></div>
+      <b style="color:var(--terra)">${label}</b></div>
+      <div class="bar" style="margin:12px 0"><i style="width:${pc}%"></i></div>
+      <div class="row"><span class="muted">${s.ok} de ${c.days} días cumplidos · ${s.left} días restantes</span>
+      <button class="btn sm danger" data-act="delCh" data-id="${c.id}">Eliminar</button></div></div>`;
+  }).join('') : '<p class="muted">Aún no tienes retos. Crea uno arriba.</p>';
+}
+$('#chForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target, days = Number(f.days.value), goal = Number(f.goal.value), start = f.start.value, name = f.name.value.trim();
+  const errs = [];
+  if (![7, 15, 30, 90].includes(days)) errs.push('Elige una duración válida.');
+  if (!Number.isInteger(goal) || goal < 1 || goal > 1000) errs.push('La meta diaria debe ser un entero entre 1 y 1000.');
+  if (!start) errs.push('Indica la fecha de inicio.');
+  if (name.length > 60) errs.push('El nombre admite máximo 60 caracteres.');
+  showErr('#chErr', errs); if (errs.length) return;
+  S.challenges.push({ id: uid(), days, goal, start, name });
+  if (save()) { toast('Reto creado'); f.reset(); f.goal.value = 20; f.start.value = today(); renderChallenges(); }
+});
+function deleteChallenge(id) {
+  if (!confirm('¿Eliminar este reto?')) return;
+  S.challenges = S.challenges.filter(c => c.id !== id); save(); renderChallenges(); toast('Reto eliminado');
+}
+
+/* ---------- AJUSTES Y RESPALDO ---------- */
+function renderSettings() {
+  const f = $('#setForm'); f.name.value = S.profile.name || ''; f.goal.value = S.profile.goal || 20;
+}
+$('#setForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target, goal = Number(f.goal.value), name = f.name.value.trim(), errs = [];
+  if (name.length > 40) errs.push('El nombre admite máximo 40 caracteres.');
+  if (!Number.isInteger(goal) || goal < 1 || goal > 1000) errs.push('La meta diaria debe ser un entero entre 1 y 1000.');
+  showErr('#setErr', errs); if (errs.length) return;
+  S.profile = { name, goal };
+  if (save()) toast('Ajustes guardados');
+});
+function exportJSON() {
+  const blob = new Blob([JSON.stringify({ app: 'The Book Tracker Journal', version: 1, exported: new Date().toISOString(), data: S }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `the-book-tracker-journal-${today()}.json`; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  toast('Copia exportada');
+}
+$('#importFile').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result).data;
+      if (!d || !Array.isArray(d.books) || !Array.isArray(d.sessions) || !Array.isArray(d.journal) || !d.plans) throw new Error('formato');
+      if (!confirm('Esto reemplazará los datos actuales por los de la copia. ¿Continuar?')) return;
+      S = fix(d); d.challenges = d.challenges || []; d.profile = d.profile || { name: '', goal: 20 };
+      save(); fillBookSelects(); renderSettings(); toast('Copia importada');
+    } catch (err) { alert('El archivo no es una copia válida de My Reading Journey.'); }
+    e.target.value = '';
+  };
+  r.readAsText(file);
+});
+function resetAll() {
+  if (!confirm('¿Borrar todos los datos de este navegador? Esta acción no se puede deshacer.')) return;
+  S = fix(seed()); save(); fillBookSelects(); go('home'); toast('Datos borrados');
+}
+
+/* ---------- Eventos delegados ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act], nav button');
+  if (!el) return;
+  if (el.tagName === 'NAV' || el.matches('nav button')) return go(el.dataset.v);
+  if (el.tagName === 'INPUT') return;
+  const a = el.dataset.act, id = el.dataset.id;
+  if (a === 'go') return go(el.dataset.v);
+  if (a === 'edit') return openEdit(id);
+  if (a === 'delBook') return deleteBook(id);
+  if (a === 'reprogram') return reprogram(id);
+  if (a === 'delPlan') { if (confirm('¿Eliminar el plan de este libro?')) { delete S.plans[id]; save(); renderPlan(); toast('Plan eliminado'); } return; }
+  if (a === 'delSession') return deleteSession(id);
+  if (a === 'delJournal') return deleteJournal(id);
+  if (a === 'delCh') return deleteChallenge(id);
+  if (a === 'export') return exportJSON();
+  if (a === 'importPick') return $('#importFile').click();
+  if (a === 'reset') return resetAll();
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset && el.dataset.act === 'day') {
+    const p = S.plans[$('#planBook').value]; if (!p) return;
+    const d = p.days[Number(el.dataset.i)]; if (!d) return;
+    d.done = el.checked; save(); renderPlan();
+  }
+});
+
+/* ---------- DE LA LECTURA A LA ACCIÓN ---------- */
+const CATS = ['Desarrollo personal','Mentalidad y disciplina','Comunicación','Negociación','Finanzas','Emprendimiento','Relaciones personales','Organización y productividad'];
+const AST = { pendiente: 'Pendiente', progreso: 'En progreso', completada: 'Completada' };
+const RQ = ['¿Qué aprendí esta semana?','¿Qué apliqué realmente?','¿Qué cambios noté en mí?','¿Qué me costó poner en práctica?','¿Qué quiero mejorar la próxima semana?'];
+
+// Migración sin pérdida: añade la estructura nueva solo si no existe; nunca borra datos previos.
+function exampleLearn(bid) {
+  const t = today();
+  return { id: 'ex-' + uid(), book: bid, date: t, page: '', cat: 'Comunicación', example: true, created: Date.now(),
+    idea: 'La importancia de escuchar activamente.', quote: '', why: 'Escuchar bien reduce malentendidos y permite negociar mejor.', life: 'Mis conversaciones diarias en casa y en el trabajo.',
+    actions: [{ id: uid(), improve: 'Escuchar sin interrumpir', doit: 'Practicar la escucha activa durante mis conversaciones.', first: 'Dejar que la otra persona termine de hablar antes de responder.', start: t, due: addDays(t, 14), measure: 'Registrar tres conversaciones en las que haya aplicado esta habilidad.', status: 'pendiente' }],
+    experiments: [] };
+}
+function fix(d) {
+  if (!d.learn) { d.learn = []; const b = d.books.find(x => x.title === 'Rompe la barrera del no') || d.books[0]; if (b) d.learn.push(exampleLearn(b.id)); }
+  d.reviews = d.reviews || []; d.challenges = d.challenges || []; d.profile = d.profile || { name: '', goal: 20 };
+  return d;
+}
+
+const lOf = id => S.learn.find(x => x.id === id);
+const fld = n => $('#lForm [name="' + n + '"]');
+const showE = (el, list) => { el.innerHTML = list.map(esc).join('<br>'); };
+const optsTo = (sel, html) => { const k = sel.value; sel.innerHTML = html; if ([...sel.options].some(o => o.value === k)) sel.value = k; };
+const catOpts = () => CATS.map(c => `<option>${c}</option>`).join('');
+
+function fillA() {
+  const bo = S.books.map(b => `<option value="${b.id}">${esc(b.title)}</option>`).join('');
+  optsTo($('#aBook'), '<option value="">Todos los libros</option>' + bo);
+  optsTo($('#aCat'), '<option value="">Todas las categorías</option>' + catOpts());
+  optsTo(fld('book'), bo || '<option value="">Agrega un libro primero</option>');
+  optsTo(fld('cat'), catOpts());
+}
+function filtered() {
+  const b = $('#aBook').value, c = $('#aCat').value, f = $('#aFrom').value, t = $('#aTo').value, q = $('#aSearch').value.trim().toLowerCase();
+  return S.learn.filter(l => (!b || l.book === b) && (!c || l.cat === c) && (!f || l.date >= f) && (!t || l.date <= t) &&
+    (!q || [l.idea, l.quote, l.why, l.life, l.cat].join(' ').toLowerCase().includes(q)));
+}
+
+function renderAStats() {
+  const acts = S.learn.flatMap(l => l.actions.map(a => ({ a, cat: l.cat })));
+  const done = acts.filter(x => x.a.status === 'completada').length;
+  const exps = S.learn.reduce((n, l) => n + l.experiments.length, 0);
+  const expDone = S.learn.reduce((n, l) => n + l.experiments.filter(e => e.result).length, 0);
+  const applied = S.learn.filter(l => l.actions.some(a => a.status === 'completada') || l.experiments.some(e => e.result)).length;
+  const catC = {}; CATS.forEach(c => catC[c] = 0);
+  acts.forEach(x => { if (x.a.status === 'completada') catC[x.cat]++; });
+  const mx = Math.max(1, ...Object.values(catC));
+  const st = (v, l) => `<div class="card stat"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  $('#aStats').innerHTML = `<div class="grid">${st(S.learn.length, 'Aprendizajes')}${st(acts.length, 'Acciones creadas')}${st(done, 'Acciones completadas')}${st(exps, 'Experimentos')}</div>
+    <div class="card" style="margin-top:12px"><div class="row"><h3>Porcentaje de aplicación</h3><b style="color:var(--terra)">${pct(applied, S.learn.length)}%</b></div>
+    <div class="bar" style="margin:10px 0"><i style="width:${pct(applied, S.learn.length)}%"></i></div>
+    <p class="muted">Aprendizajes con al menos una acción completada o un experimento con resultado. Experimentos con resultado: ${expDone} de ${exps}.</p></div>
+    <div class="card" style="margin-top:12px"><h3>Categorías en las que más estoy creciendo</h3><p class="muted">Acciones completadas por categoría</p>
+    ${CATS.map(c => `<div class="item"><div class="row"><span>${c}</span><span class="muted">${catC[c]}</span></div><div class="bar" style="margin-top:6px"><i style="width:${pct(catC[c], mx)}%"></i></div></div>`).join('')}</div>`;
+}
+
+function actHtml(l, a) {
+  const pc = a.status === 'completada' ? 100 : a.status === 'progreso' ? 50 : 0;
+  return `<div class="item"><div class="row"><b>Acción: ${esc(a.doit)}</b>
+    <select data-ac="aSt" data-l="${l.id}" data-id="${a.id}" style="width:auto;padding:6px 10px">${Object.keys(AST).map(k => `<option value="${k}" ${a.status === k ? 'selected' : ''}>${AST[k]}</option>`).join('')}</select></div>
+    <p class="muted" style="margin:4px 0">Mejorar: ${esc(a.improve)} · Primera acción: ${esc(a.first)}</p>
+    <p class="muted" style="margin:4px 0">Inicio ${fmtDate(a.start)} · Límite ${fmtDate(a.due)} · Medición: ${esc(a.measure)}</p>
+    <div class="bar"><i style="width:${pc}%"></i></div>
+    <button class="btn sm danger" style="margin-top:8px" data-ac="aDel" data-l="${l.id}" data-id="${a.id}">Eliminar acción</button></div>`;
+}
+function expHtml(l, e) {
+  const el = Math.max(0, Math.min(e.days, diffDays(e.start, today()) + 1));
+  return `<div class="sub"><div class="row"><b>Experimento: ${esc(e.name)}</b><span class="tag">${el} de ${e.days} días</span></div>
+    <p class="muted" style="margin:4px 0">Inicio ${fmtDate(e.start)} · Duración ${e.days} días · Objetivo: ${esc(e.goal)}</p>
+    <div class="bar"><i style="width:${pct(el, e.days)}%"></i></div>
+    ${e.result ? `<p style="margin:8px 0 0"><b>Resultado:</b> ${esc(e.result)}</p><p style="margin:4px 0"><b>Qué funcionó:</b> ${esc(e.worked)}</p><p style="margin:4px 0"><b>Qué necesito mejorar:</b> ${esc(e.improve)}</p>` : ''}
+    <div class="row" style="justify-content:flex-start;gap:8px;margin-top:8px"><button class="btn sm ghost" data-ac="resForm" data-l="${l.id}" data-id="${e.id}">${e.result ? 'Editar resultado' : 'Registrar resultado'}</button><button class="btn sm danger" data-ac="expDel" data-l="${l.id}" data-id="${e.id}">Eliminar</button></div>
+    <div id="res-${e.id}"></div></div>`;
+}
+function lCard(l) {
+  const b = bookOf(l.book);
+  return `<div class="card" style="margin-bottom:12px">
+    <span class="tag">${esc(l.cat)}</span> <span class="muted">${fmtDate(l.date)}${l.page ? ' · pág. ' + l.page : ''}</span>
+    <h3 style="margin-top:6px">${esc(l.idea)}</h3>
+    <p class="muted" style="margin:0">${esc(b ? b.title : 'Libro eliminado')}${l.example ? ' · ejemplo editable' : ''}</p>
+    ${l.quote ? `<p style="margin:10px 0;padding-left:12px;border-left:3px solid var(--terra);font-style:italic">«${esc(l.quote)}»</p>` : ''}
+    ${l.why ? `<p><b>Por qué importa:</b> ${esc(l.why)}</p>` : ''}
+    ${l.life ? `<p><b>Relación con mi vida:</b> ${esc(l.life)}</p>` : ''}
+    ${l.actions.map(a => actHtml(l, a)).join('')}
+    ${l.experiments.map(e => expHtml(l, e)).join('')}
+    <div class="row" style="justify-content:flex-start;gap:8px;margin-top:10px">
+      <button class="btn sm ghost" data-ac="lEdit" data-id="${l.id}">Editar</button>
+      <button class="btn sm ghost" data-ac="toAct" data-id="${l.id}">Convertir en acción</button>
+      <button class="btn sm ghost" data-ac="toExp" data-id="${l.id}">Nuevo experimento</button>
+      <button class="btn sm danger" data-ac="lDel" data-id="${l.id}">Eliminar</button></div>
+    <div id="inline-${l.id}"></div></div>`;
+}
+function renderAList() {
+  const list = filtered().sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
+  $('#aList').innerHTML = list.length ? list.map(lCard).join('') : '<p class="muted">No hay aprendizajes con estos filtros.</p>';
+}
+function renderRev() {
+  const list = [...S.reviews].sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
+  $('#rvList').innerHTML = list.length ? list.map(r => `<div class="card" style="margin-bottom:12px"><div class="row"><b>Revisión · ${fmtDate(r.date)}</b><button class="btn sm ghost" data-ac="rvDel" data-id="${r.id}">Eliminar</button></div>${r.a.map((a, i) => a ? `<div class="item"><span class="muted">${RQ[i]}</span><p style="margin:2px 0 0;white-space:pre-wrap">${esc(a)}</p></div>` : '').join('')}</div>`).join('') : '<p class="muted">Todavía no tienes revisiones semanales.</p>';
+}
+function renderAction() {
+  fillA();
+  if (!fld('date').value) fld('date').value = today();
+  const rf = $('#rvForm [name=date]'); if (!rf.value) rf.value = today();
+  renderAStats(); renderAList(); renderRev();
+}
+function openAction(id) { fillA(); $('#aBook').value = id; fld('book').value = id; go('action'); }
+
+function editL(id) {
+  const l = lOf(id); if (!l) return;
+  fld('id').value = l.id; fld('book').value = l.book; fld('date').value = l.date; fld('page').value = l.page || '';
+  fld('cat').value = l.cat; fld('idea').value = l.idea; fld('quote').value = l.quote || ''; fld('why').value = l.why || ''; fld('life').value = l.life || '';
+  $('#lSubmit').textContent = 'Guardar cambios'; $('#lCancel').classList.remove('hidden');
+  $('#lForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function cancelL() {
+  $('#lForm').reset(); fld('id').value = ''; fld('date').value = today();
+  if ($('#aBook').value) fld('book').value = $('#aBook').value;
+  $('#lSubmit').textContent = 'Guardar aprendizaje'; $('#lCancel').classList.add('hidden'); $('#lErr').innerHTML = '';
+}
+
+function actForm(lid) {
+  return `<form class="sub" data-f="act" data-l="${lid}" novalidate><h3>Convertir en acción</h3>
+    <label>¿Qué quiero mejorar?</label><input name="improve" maxlength="200">
+    <label>¿Qué voy a hacer diferente?</label><textarea name="doit" maxlength="300"></textarea>
+    <label>¿Cuál será mi primera acción?</label><input name="first" maxlength="200">
+    <div class="two"><div><label>¿Cuándo comenzaré?</label><input name="start" type="date" value="${today()}"></div><div><label>Fecha límite</label><input name="due" type="date"></div></div>
+    <label>¿Cómo mediré mi progreso?</label><input name="measure" maxlength="200">
+    <div class="err" data-err></div>
+    <div class="row" style="margin-top:10px"><button class="btn sm" type="submit">Crear acción</button><button class="btn sm ghost" type="button" data-ac="closeInline" data-l="${lid}">Cerrar</button></div></form>`;
+}
+function expForm(lid) {
+  return `<form class="sub" data-f="exp" data-l="${lid}" novalidate><h3>Nuevo experimento</h3>
+    <label>¿Qué practicaré?</label><input name="name" maxlength="200" placeholder="Ej. Escuchar sin interrumpir">
+    <div class="two"><div><label>Fecha de inicio</label><input name="start" type="date" value="${today()}"></div><div><label>Duración (días)</label><input name="days" type="number" min="1" max="90" value="7"></div></div>
+    <label>Objetivo</label><input name="goal" maxlength="200" placeholder="Ej. Tres conversaciones sin interrumpir">
+    <div class="err" data-err></div>
+    <div class="row" style="margin-top:10px"><button class="btn sm" type="submit">Crear experimento</button><button class="btn sm ghost" type="button" data-ac="closeInline" data-l="${lid}">Cerrar</button></div></form>`;
+}
+function resForm(lid, x) {
+  return `<form class="sub" data-f="res" data-l="${lid}" data-id="${x.id}" novalidate>
+    <label>Resultado</label><textarea name="result" maxlength="600">${esc(x.result)}</textarea>
+    <label>Qué funcionó</label><textarea name="worked" maxlength="600">${esc(x.worked)}</textarea>
+    <label>Qué necesito mejorar</label><textarea name="improve" maxlength="600">${esc(x.improve)}</textarea>
+    <div class="err" data-err></div>
+    <div class="row" style="margin-top:10px"><button class="btn sm" type="submit">Guardar resultado</button></div></form>`;
+}
+
+/* Eventos de la sección */
+$('#lForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const g = n => fld(n).value.trim();
+  const id = g('id'), book = g('book'), date = g('date'), page = g('page'), cat = g('cat');
+  const idea = g('idea'), quote = g('quote'), why = g('why'), life = g('life');
+  const b = bookOf(book), err = [];
+  if (!b) err.push('Selecciona un libro.');
+  if (!date) err.push('Indica la fecha.'); else if (date > today()) err.push('La fecha no puede ser futura.');
+  const pg = page === '' ? '' : Number(page);
+  if (page !== '' && (!Number.isInteger(pg) || pg < 1 || (b && pg > b.pages))) err.push(`El número de página debe estar entre 1 y ${b ? b.pages : 'el total del libro'}.`);
+  if (!CATS.includes(cat)) err.push('Elige una categoría.');
+  if (!idea) err.push('Escribe la idea o enseñanza que aprendiste.');
+  if ([idea, quote, why, life].some(x => x.length > 600)) err.push('Cada campo admite máximo 600 caracteres.');
+  showE($('#lErr'), err); if (err.length) return;
+  const data = { book, date, page: pg, cat, idea, quote, why, life };
+  if (id && lOf(id)) Object.assign(lOf(id), data);
+  else S.learn.push({ id: uid(), ...data, actions: [], experiments: [], created: Date.now() });
+  save(); cancelL(); renderAction(); toast('Aprendizaje guardado');
+});
+
+$('#rvForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target, date = f.querySelector('[name=date]').value;
+  const a = [1, 2, 3, 4, 5].map(i => f.querySelector('[name=rq' + i + ']').value.trim());
+  const err = [];
+  if (!date) err.push('Indica la fecha de la revisión.'); else if (date > today()) err.push('La fecha no puede ser futura.');
+  if (a.every(x => !x)) err.push('Responde al menos una pregunta.');
+  if (a.some(x => x.length > 600)) err.push('Cada respuesta admite máximo 600 caracteres.');
+  showE($('#rvErr'), err); if (err.length) return;
+  S.reviews.push({ id: uid(), date, a, created: Date.now() });
+  save(); f.reset(); f.querySelector('[name=date]').value = today(); renderRev(); toast('Revisión guardada');
+});
+
+// Formularios creados dentro de cada aprendizaje
+document.addEventListener('submit', e => {
+  const f = e.target, k = f.dataset.f; if (!k) return;
+  e.preventDefault();
+  const v = n => f.querySelector('[name="' + n + '"]').value.trim();
+  const l = lOf(f.dataset.l); if (!l) return;
+  const box = f.querySelector('[data-err]'), err = [];
+  if (k === 'act') {
+    const improve = v('improve'), doit = v('doit'), first = v('first'), start = v('start'), due = v('due'), measure = v('measure');
+    if (!improve) err.push('Escribe qué quiero mejorar.');
+    if (!doit) err.push('Escribe qué voy a hacer diferente.');
+    if (!first) err.push('Escribe cuál será mi primera acción.');
+    if (!start) err.push('Indica cuándo comenzaré.');
+    if (!due) err.push('Indica la fecha límite.'); else if (start && due < start) err.push('La fecha límite no puede ser anterior al inicio.');
+    if (!measure) err.push('Escribe cómo mediré mi progreso.');
+    if (err.length) return showE(box, err);
+    l.actions.push({ id: uid(), improve, doit, first, start, due, measure, status: 'pendiente' });
+    save(); renderAction(); toast('Acción creada');
+  }
+  if (k === 'exp') {
+    const name = v('name'), start = v('start'), days = Number(v('days')), goal = v('goal');
+    if (!name) err.push('Escribe qué practicarás.');
+    if (!start) err.push('Indica la fecha de inicio.');
+    if (!Number.isInteger(days) || days < 1 || days > 90) err.push('La duración debe ser entre 1 y 90 días.');
+    if (!goal) err.push('Escribe el objetivo.');
+    if (err.length) return showE(box, err);
+    l.experiments.push({ id: uid(), name, start, days, goal, result: '', worked: '', improve: '' });
+    save(); renderAction(); toast('Experimento creado');
+  }
+  if (k === 'res') {
+    const result = v('result'), worked = v('worked'), improve = v('improve');
+    if (!result) err.push('Escribe el resultado del experimento.');
+    if (err.length) return showE(box, err);
+    const x = l.experiments.find(y => y.id === f.dataset.id); if (!x) return;
+    Object.assign(x, { result, worked, improve });
+    save(); renderAction(); toast('Resultado guardado');
+  }
+});
+
+// Acciones con data-ac (no interfieren con los botones existentes)
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-ac]'); if (!el) return;
+  const a = el.dataset.ac, id = el.dataset.id, lid = el.dataset.l;
+  if (a === 'openAction') return openAction(id);
+  if (a === 'aClear') { ['#aBook', '#aCat', '#aFrom', '#aTo', '#aSearch'].forEach(s => $(s).value = ''); return renderAList(); }
+  if (a === 'lEdit') return editL(id);
+  if (a === 'lCancel') return cancelL();
+  if (a === 'lDel') { if (confirm('¿Eliminar este aprendizaje con sus acciones y experimentos?')) { S.learn = S.learn.filter(x => x.id !== id); save(); renderAction(); toast('Aprendizaje eliminado'); } return; }
+  if (a === 'toAct' || a === 'toExp') { const box = $('#inline-' + id); if (box) box.innerHTML = a === 'toAct' ? actForm(id) : expForm(id); return; }
+  if (a === 'closeInline') { const box = $('#inline-' + lid); if (box) box.innerHTML = ''; return; }
+  if (a === 'resForm') { const x = lOf(lid)?.experiments.find(y => y.id === id); const box = $('#res-' + id); if (x && box) box.innerHTML = resForm(lid, x); return; }
+  if (a === 'aDel') { const l = lOf(lid); if (l && confirm('¿Eliminar esta acción?')) { l.actions = l.actions.filter(x => x.id !== id); save(); renderAction(); toast('Acción eliminada'); } return; }
+  if (a === 'expDel') { const l = lOf(lid); if (l && confirm('¿Eliminar este experimento?')) { l.experiments = l.experiments.filter(x => x.id !== id); save(); renderAction(); toast('Experimento eliminado'); } return; }
+  if (a === 'rvDel') { if (confirm('¿Eliminar esta revisión?')) { S.reviews = S.reviews.filter(r => r.id !== id); save(); renderRev(); toast('Revisión eliminada'); } return; }
+});
+
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.ac === 'aSt') {
+    const l = lOf(el.dataset.l), a = l && l.actions.find(x => x.id === el.dataset.id); if (!a) return;
+    a.status = el.value; save(); renderAList(); renderAStats();
+    if (a.status === 'completada') toast('¡Acción completada!');
+  }
+});
+['#aBook', '#aCat', '#aFrom', '#aTo'].forEach(s => $(s).addEventListener('change', renderAList));
+$('#aSearch').addEventListener('input', renderAList);
+
+/* ---------- Arranque ---------- */
+(function init() {
+  $('#trackForm').date.value = today();
+  $('#jForm').date.value = today();
+  $('#chForm').start.value = today();
+  fillBookSelects();
+  renderHome();
+})();
+</script>
+</body>
+</html>
